@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>RPC</title>
+  <style media="screen">
+    table {
+      border-collapse: collapse;
+    }
+    td, th {
+      border: 1px solid;
+      text-align: center;
+    }
+  </style>
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+
+  <!-- Bootstrap CDN-->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/4.1.1/firebase.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
+  <script src="assets/javascript/rps.js"></script>
+  <script src="assets/javascript/sprite.js" charset="utf-8"></script>
+
+  <script type="text/javascript">
+      $(document).ready(function() {
+
+        //Refer: https://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
+
+        var myGUID = sessionStorage.getItem("myGUID");
+        if (null==myGUID) {
+          myGUID = 'xxxyxxxx-xxxx-yxxx-xxyx-xxxxxyxxxxxx'.replace(/[xy]/g, function(c) {
+              var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+              return v.toString(16);
+          });
+          sessionStorage.setItem("myGUID",myGUID);
+        }
+
+        var remoteGUID  =  "";
+        var mySelection = "";
+        var remoteSelection = "";
+
+        var config = {
+          apiKey: "AIzaSyBYVD1wPbB5BQf3AzM0vH5x5oxTY20eKqI",
+          authDomain: "rockpaperscissors-95655.firebaseapp.com",
+          databaseURL: "https://rockpaperscissors-95655.firebaseio.com",
+          projectId: "rockpaperscissors-95655",
+          storageBucket: "rockpaperscissors-95655.appspot.com",
+          messagingSenderId: "77803045446"
+        };
+        firebase.initializeApp(config);
+
+        var database = firebase.database();
+        database.ref().child('/RPS/' + myGUID).set({"mySelection" : 0, "currentID": ""});
+
+        var players = [new Sprite(0, "Obi-Wan Kenobi", 0, 0, "assets/images/Obi-1.jpg"),
+                     new Sprite(1, "Luke Skywalker", 0, 0, "assets/images/Luke-2.png"),
+                     new Sprite(2, "Darth Sidious", 0, 0, "assets/images/Darth-3.jpg"),
+                     new Sprite(3, "Darth Maul", 0, 0, "assets/images/Darth-4.jpg")];
+
+        var powerMIN = 100;
+        var powerMAX = 200;
+        var hpMAX = 20;
+        var hpMIN = 1;
+
+        initGame();
+
+         function initGame() {
+          clearGame();
+           $.each(players, createPlayerDisplaySprite);
+
+           $("#yourCharacter").append(createNewTextDisplay("Your Character"));
+           $("#enemies").append(createNewTextDisplay("Enemies Available To Attack"));
+           $("#fightSection").append(createNewTextDisplay("Fight Selection"));
+           $("#fightSection").append(createAButton("cmdRock", "Rock", "r", attackAction));
+           $("#fightSection").append(createAButton("cmdPaper", "Paper", "p", attackAction));
+           $("#fightSection").append(createAButton("cmdScissor", "Scissor", "s", attackAction));
+           $("#defender").append(createNewTextDisplay("Defender"));
+           $("#cmdAttack").attr("disabled", "true");
+
+           $("#notes").removeClass("alert alert-info alert-warning alert-danger alert-success");
+           $("#notes").addClass("alert alert-info");
+           $("#notes").text("Please choose your player, by clicking the the player sprite!!!");
+         }
+
+        function clearGame() {
+          $("#yourCharacter").empty();
+          $("#enemies").empty();
+          $("#fightSection").empty();
+          $("#defender").empty();
+        }
+
+        function createPlayerDisplaySprite(index, player) {
+          var sprite = player;
+          sprite.power = getRandomInt(powerMIN, powerMAX);
+          sprite.attackPower = getRandomInt(hpMIN, hpMAX);
+
+          var spriteDisplay = $("<span>");
+          spriteDisplay.addClass("thumbnail");
+          spriteDisplay.css('float','left');
+          spriteDisplay.css('margin','2px');
+          spriteDisplay.attr("id", ("id-"+index));
+          spriteDisplay.attr("index", index);
+          spriteDisplay.width(100);
+
+          var img = $("<img>");
+          img.attr("src",sprite.img);
+          img.addClass("img-thumbnail");
+          img.attr("alt", player.name);
+          img.width(120);
+
+          var caption = createSpritText("name", index, player.name);
+          //var power = createProgressBar("power", index, player.power);
+
+          spriteDisplay.append(caption);
+          spriteDisplay.append(img);
+          //spriteDisplay.append(power);
+
+          spriteDisplay.on("click", handleSpriteClick);
+          $("#dugout").append(spriteDisplay);
+        }
+
+        function createSpritText(key, index, displayString) {
+          var caption = $("<span>");
+          caption.attr("id","id-"+index+"-"+key);
+          caption.addClass("caption");
+          caption.text(displayString);
+          caption.css("text-align", "center");
+          caption.css("fontSize", 9);
+          caption.width(100);
+          return caption;
+        }
+
+        function createProgressBar(key, index, displayString) {
+          var currValue =  (displayString / powerMAX)*100;
+          var progress = $("<div>");
+          progress.addClass("progress");
+          var progressBar = $("<div>");
+          progressBar.attr("id","id-"+index+"-"+key);
+          progressBar.addClass("progress-bar");
+          progressBar.attr("role","progressbar");
+          progressBar.attr("style","width: "+currValue+"%;");
+          progressBar.attr("aria-valuenow",displayString);
+          progressBar.attr("aria-valuemin",powerMIN);
+          progressBar.attr("aria-valuemax",powerMAX);
+          progressBar.text(displayString);
+          progress.append(progressBar);
+          return progress;
+        }
+
+        function updateProgressBar(key, index, displayString) {
+            var currValue =  (displayString / powerMAX)*100;
+            var progressBar = $("#id-"+index+"-"+key);
+            progressBar.attr("style","width: "+currValue+"%;");
+            progressBar.attr("aria-valuenow",displayString);
+            progressBar.text(displayString);
+        }
+
+        function createNewTextDisplay(displayString) {
+          var displayDiv = $("<div>");
+          displayDiv.addClass("displayText");
+          displayDiv.css("clear","both");
+          displayDiv.text(displayString);
+          displayDiv.css("text-align", "left");
+          return displayDiv;
+        }
+
+        function createAButton(id, displayString, key, callbackFunction) {
+          var attackButton = $("<button>");
+          if (id==="cmdAttack") {
+            attackButton.addClass("btn btn-danger");
+          } else {
+            attackButton.addClass("btn btn-primary");
+          }
+          attackButton.attr("id", id);
+          attackButton.data("key", key);
+          attackButton.text(displayString);
+          attackButton.on("click", callbackFunction);
+          return attackButton;
+        }
+
+        function attackAction() {
+          if (validatePlayer($("#yourCharacter"), 2, "No Player selected!!!")
+                 && validatePlayer($("#defender"), 2, "No Defender selected!!!")) {
+                    mySelection = $(this).data("key");
+                    updateServer(mySelection);
+           }
+        }
+
+        function updateServer(mySelection) {
+          database.ref().child('/RPS/' + myGUID).update({
+            mySelection: mySelection
+          });
+        }
+
+        var myPlayer = undefined;
+        var defender = undefined;
+        function playGameStartWars() {
+          if (myPlayer.power<1 || defender.power<1) return;
+          myPlayer.power -= defender.attackPower;
+          defender.power -= myPlayer.attackPower;
+          updateProgressBar("power", myPlayer.index, myPlayer.power);
+          updateProgressBar("power", defender.index, defender.power);
+          runGamePlayLogic();
+          myPlayer.attackPower += getRandomInt(hpMIN, hpMAX/2);;
+        }
+
+        function runGamePlayLogic() {
+          if (myPlayer.power>0 && defender.power>0) {
+            createHtmlTextNotification("alert-info", "You attacked " + defender.name + " for <span class='badge badge-pill badge-primary'>" + myPlayer.attackPower + "</span> damage.",
+                                          false, "<br/>" + defender.name + " attacked you back with <span class='badge badge-pill badge-primary'>" + defender.attackPower + "</span> damage.");
+          } else if (myPlayer.power<1 && defender.power>=1) {
+            createHtmlTextNotification("alert-danger", "<strong>GAME OVER: </strong>You have been defeted by " + defender.name + ", please press ",
+                                          true, " to play again.");
+            $("#cmdAttack").attr("disabled", "true");
+          } else if (defender.power<1 && myPlayer.power>=1) {
+            if ($("#enemies").children().length==1) {
+              createHtmlTextNotification("alert-success", "<strong>You WON: </strong>You have defeated " + defender.name + ", please press ", true, " to play again.");
+            }  else {
+              createHtmlTextNotification("alert-success", "<strong>ROUND: </strong>You have defeated " + defender.name + ", please choose another enemy to fight.", false, "");
+            }
+            $("#cmdAttack").attr("disabled", "true");
+            $("#id-"+defender.index).remove();
+          } else {
+            createHtmlTextNotification("alert-warning", "<strong>Tie: </strong>Game between "+myPlayer.name+" & "+defender.name+" ends in a tie, please press ",
+                                          true, " to play again.");
+            $("#cmdAttack").attr("disabled", "true");
+          }
+        }
+
+        function toggleNotesCSS(className) {
+          $("#notes").removeClass("alert-info alert-warning alert-danger alert-success");
+          $("#notes").addClass(className);
+        }
+
+        function createHtmlTextNotification(className, prefix, isRestartButtonRequired, suffix) {
+          toggleNotesCSS(className);
+          $("#notes").html(prefix);
+          if (isRestartButtonRequired) {
+            $("#notes").append(createAButton("cmdRestart", "Restart", initGame));
+          }
+          $("#notes").append(suffix);
+        }
+
+        function validatePlayer(parent, childLength, warnMessage) {
+          if (parent.children().length !=2) {
+            $("#notes").removeClass("alert-info alert-warning alert-danger alert-success");
+            $("#notes").addClass("alert-warning");
+            $("#notes").text(warnMessage);
+            return false;
+          }
+          return true;
+        }
+
+        function handleSpriteClick() {
+          var parentID = $(this).parent().attr("id");
+          var currentID = $(this).attr("index");
+          switch(parentID) {
+            case "dugout":
+              if ($("#yourCharacter").children().length ==1) { // Ensure no existing sprit
+                myPlayer = players[currentID];
+                $(this).data("myGUID", myGUID);
+                $("#yourCharacter").append($(this));
+                database.ref().child('/RPS/' + myGUID).update({"currentID" : currentID});
+                $("#notes").text("Please wait for enemie player!!!");
+              }
+              break;
+            case "enemies":
+              if ($("#defender").children().length ==1) { // Ensure no existing sprit
+                defender = players[currentID];
+                $(this).addClass("defender");
+                $("#defender").append($(this));
+                remoteGUID = $(this).data("myGUID");
+                $("#cmdAttack").removeAttr("disabled");
+                $("#notes").text("Please press 'Fight Selection' button, to play !!!");
+              }
+              break;
+            case "defender":
+              break;
+            default:
+          }
+        }
+
+        database.ref().on("value", function(data) {
+            var rps = data.val().RPS;
+            var keys = Object.keys(rps);
+
+            for(var i=0; i<keys.length; i++) {
+                if (keys[i]==myGUID) continue;
+                if (keys[i]==remoteGUID) {
+                  remoteSelection = rps[keys[i]].mySelection;
+                  if (remoteSelection == "-999" || mySelection == "-999") {
+                      setTimeout(location.reload(), 500);
+                  } else if ((remoteSelection != "" && remoteSelection != "0")
+                        && (mySelection !="" && mySelection !="0")) {
+                    var myLocalSelection = mySelection;
+                    mySelection = "";
+                    if (playRemoteGame(myLocalSelection, remoteSelection)) {
+                      updateServer("0");
+                    }
+                    remoteSelection = "";
+                  }
+                } else {
+                  var remotePlayer = players[rps[keys[i]].currentID];
+                  var newRemote = $("#id-"+rps[keys[i]].currentID);
+                  if (remotePlayer && (newRemote.parent().attr("id")=="dugout")) {
+                      newRemote.data("myGUID", keys[i]);
+                      moveElementsToEnemies(rps[keys[i]].currentID, newRemote);
+                  }
+               }
+            }
+        });
+
+        function moveElementsToEnemies(index, item) {
+          $(item).addClass("enemie");
+          $(item).children("span").addClass("enemieText");
+          $("#enemies").append($(item));
+        }
+
+        /** Helper function to return Random Number between min and max **/
+        function getRandomInt(min, max) {
+          return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        $(document).on( "click", "#resetSessions", function() {
+            mySelection = "-999";
+            updateServer("-999");
+            //database.ref().remove();
+            // var usersRef = database.ref().child("/RPC");
+            // usersRef.orderByValue().on("value", function(snapshot) {
+            //     console.log(snapshot.val());
+            //     snapshot.forEach(function(data) {
+            //         console.log(data.key);
+            //     });
+            //setTimeout(location.reload(), 1500);
+        });
+
+      });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-7">
+        <div class="page-header">
+          <h3>Star Wars RPG - (RPS)!!! </h3>
+        </div>
+        <div class="row">
+          <section class="main-section">
+              <div class="col-md-12">
+                <div id="dugout"></div>
+                <div id="yourCharacter"></div>
+                <div id="enemies"></div>
+                <div id="fightSection"></div>
+                <div id="defender"></div>
+              </div>
+            </section>
+        </div>
+      </div>
+      <div class="col-md-5">
+         <div class="page-header">
+           <h3>Game Information</h3>
+         </div>
+         <div>
+           <div id="notes" class="alert alert-info">Please choose your player, by clicking the the player sprite!!!</div>
+           <button id="resetSessions" class="btn btn-danger" type="button" name="button">Rest All Open Sessions</button>
+           <div>
+             <h3>My Selection  : <span id="myCurrentSelection"></span></h3>
+             <h3>Remote Selection: <span id="compCurrentSelection"></span></h3>
+             <h3>My Score: <span id="ourWin"></span></h3>
+             <h3>Remote Score: <span id="compWin"></span></h3>
+             <h3>Draw Score: <span id="draw"></span></h3>
+             <table id="scoreBoard" style="border: 1px solid;">
+               <tr>
+                 <th>My Score</th>
+                 <th>Remote Score</th>
+                 <th>Draw</th>
+               </tr>
+             </table>
+           </div>
+         </div>
+    </div>
+  </div>
+</body>
+</html>

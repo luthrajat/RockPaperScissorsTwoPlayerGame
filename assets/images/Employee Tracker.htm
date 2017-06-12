@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<!-- saved from url=(0062)file:///Users/bootcamp/Desktop/ClassRoom/06_08_2017/index.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Employee Tracker</title>
+  <link rel="stylesheet" href="./Employee Tracker_files/bootstrap.min.css">
+  <!-- Add Bootstrap Themes Here (Just uncomment the ones below for example)-->
+  <link rel="stylesheet" href="./Employee Tracker_files/bootstrap.min(1).css">
+  <script type="text/javascript" src="./Employee Tracker_files/jquery-2.2.0.min.js"></script>
+  <script src="./Employee Tracker_files/firebase.js"></script>
+  <script src="./Employee Tracker_files/moment.min.js">
+  </script>
+  <script>
+    // Initialize Firebase
+    var config = {
+      apiKey: "AIzaSyDgZiSHzH063MSTbin0n6UpSh6Sb2ENJLo",
+      authDomain: "employeedb-88d4c.firebaseapp.com",
+      databaseURL: "https://employeedb-88d4c.firebaseio.com",
+      projectId: "employeedb-88d4c",
+      storageBucket: "employeedb-88d4c.appspot.com",
+      messagingSenderId: "440598938593"
+    };
+    firebase.initializeApp(config);
+
+    var database = firebase.database();
+
+    function submitNewEmployee() {
+       event.preventDefault();
+       var employeeName =  $("#employeeName").val().trim();
+       var employeeRole =  $("#employeeRole").val().trim();
+       var startDateTerm =  $("#startDateTerm").val().trim();
+       var monthlyRate =  $("#monthlyRate").val().trim();
+
+       $("#employeeName").val("");
+       $("#employeeRole").val("");
+       $("#startDateTerm").val("");
+       $("#monthlyRate").val("");
+
+       database.ref().push({
+            name: employeeName,
+            rate: monthlyRate,
+            role: employeeRole,
+            start: startDateTerm,
+            dateAdded: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+
+    database.ref().on("child_added", addRow, onError);
+
+    function addRow(cData) {
+        var tr = $("<tr>");
+        tr.append(createTD(cData.val().name));
+        tr.append(createTD(cData.val().role));
+        tr.append(createTD(cData.val().start));
+        tr.append(createTD(getMonthsDiff(cData.val().start)));
+        tr.append(createTD(cData.val().rate));
+        tr.append(createTD("Todo"));
+
+        var tbody = $("#employees");
+        tbody.append(tr);
+    }
+
+    function getMonthsDiff(vDate) {
+        var currentTime = moment(new Date());
+        var vDateMoment = moment(vDate);
+        console.log(vDate);
+        //  console.log(moment() + ": " + currentTime + " - " +  moment(vDate,"yyyy-mm-dd").isValid());
+        if (vDateMoment.isValid()) {
+          // console.log(currentTime + " - " +  vDateMoment + " - " + moment().diff(vDateMoment, 'months', true));
+          console.log(moment().diff(vDateMoment, "months", false));
+          return moment().diff(vDateMoment, "months", false);
+        }
+        return -1;
+    }
+
+    function createTD(val) {
+        var td = $("<td>");
+        td.html(val);
+        return td;
+    }
+
+    function onError(eData) {
+    }
+
+    database.ref().on("value", function(data) {
+    },
+    function(errorData) {
+    });
+
+  </script>
+</head>
+<body>
+  <div class="container container-fluid">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="page-header">
+              <div class="jumbotron">
+                  <h1 align="center"><span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>Employee Tracker</h1>
+              </div>
+            </div>
+            <div class="row">
+              <section class="main-section">
+                  <div class="col-md-12">
+                    <div class="panel panel-default">
+                      <div class="panel-heading">Employee Tracker Sheet</div>
+                        <div class="panel-body">
+                          <table class="table table-striped">
+                              <thead>
+                                <tr>
+                                  <th>Employee Name</th>
+                                  <th>Title</th>
+                                  <th>Start Date</th>
+                                  <th>Months Employed</th>
+                                  <th>Base Salary</th>
+                                  <th>Calculation</th>
+                                </tr>
+                              </thead>
+                              <tbody id="employees"><tr><td>Rajat</td><td>VP</td><td>1121-01-01</td><td>10757</td><td>50000</td><td>Todo</td></tr><tr><td>R</td><td>EVP</td><td>0001-01-01</td><td>24197</td><td>100</td><td>Todo</td></tr><tr><td>Nadine</td><td>Dir</td><td>1988-07-21</td><td>346</td><td>100</td><td>Todo</td></tr><tr><td>Kavin</td><td>VP</td><td>2016-06-08</td><td>12</td><td>3000</td><td>Todo</td></tr></tbody>
+                              </table>
+                        </div>
+                      </div>
+                  </div>
+              </section>
+            </div>
+            <div class="row">
+              <section class="main-section">
+                  <div class="col-md-12">
+                    <div class="panel panel-default">
+                      <div class="panel-heading">New Employee</div>
+                        <div class="panel-body">
+                    <form id="employeeForm">
+                    <div class="form-group">
+                      <label for="employeeName">Employee Name:</label>
+                      <input type="text" pattern="^[_A-z0-9]{1,}$" class="form-control" id="employeeName" aria-describedby="employeeNameHelp" placeholder="Enter Employee Name">
+                      <small id="employeeNameHelp" class="form-text text-muted">Enter Employee Name.</small>
+                    </div>
+                    <div class="form-group">
+                      <label for="employeeRole">Employee Role:</label>
+                      <select class="form-control" id="employeeRole">
+                        <option>EVP</option>
+                        <option>VP</option>
+                        <option>Exec. Dir</option>
+                        <option>Sr. Architect</option>
+                        <option>Dir</option>
+                        <option>Architect</option>
+                        <option>Asoc. Dir</option>
+                        <option>Developer</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="startDate">Start Date:</label>
+                      <input type="date" pattern="MM/DD/YYYY" class="form-control" id="startDateTerm" aria-describedby="startDateHelp" placeholder="Enter Year in YYYY format">
+                      <small id="startDateHelp" class="form-text text-muted">Enter Start Year (mm/dd/yyyy).</small>
+                    </div>
+                    <div class="form-group">
+                      <label for="monthlyRate">Monthly Rate ($):</label>
+                      <input type="text" pattern="^[0-9]{0,5}$" class="form-control" id="monthlyRate" aria-describedby="endYearHelp" placeholder="Enter Monthly Rate.">
+                      <small id="monthlyRateHelp" class="form-text text-muted">Enter Monthly Rate ($).</small>
+                    </div>
+                      <button type="button" href="#" class="btn btn-primary btn-lg" role="button" aria-disabled="true" onclick="javascript:submitNewEmployee();">NewEmployee</button>
+                      <a href="file:///Users/bootcamp/Desktop/ClassRoom/06_08_2017/index.html#" class="btn btn-secondary btn-lg" role="button" aria-disabled="true" onclick="javascript:clearEmployee();">Clear Results</a>
+                    </form>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+            </div>
+      </div>
+    </div>
+  </div>
+
+
+</body></html>
